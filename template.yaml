@@ -1,0 +1,99 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: SAM template for the demo of Cognito Authentication Flows with .NET
+Resources:
+  DefineAuthChallenge:
+    Type: AWS::Serverless::Function
+    Metadata:
+      Tool: Amazon.Lambda.Annotations
+    Properties:
+      Runtime: dotnet8
+      CodeUri: ./src/CustomAuthLambdas
+      MemorySize: 1024
+      Timeout: 30
+      Policies:
+        - AWSLambdaBasicExecutionRole
+      PackageType: Zip
+      Handler: CustomAuthLambdas::CustomAuthLambdas.Functions_DefineAuthChallenge_Generated::DefineAuthChallenge
+      ReservedConcurrentExecutions: 50
+  CreateAuthChallenge:
+    Type: AWS::Serverless::Function
+    Metadata:
+      Tool: Amazon.Lambda.Annotations
+    Properties:
+      Runtime: dotnet8
+      CodeUri: ./src/CustomAuthLambdas
+      MemorySize: 1024
+      Timeout: 30
+      Policies:
+        - AWSLambdaBasicExecutionRole
+      PackageType: Zip
+      Handler: CustomAuthLambdas::CustomAuthLambdas.Functions_CreateAuthChallenge_Generated::CreateAuthChallenge
+      ReservedConcurrentExecutions: 50
+  VerifyAuthChallenge:
+    Type: AWS::Serverless::Function
+    Metadata:
+      Tool: Amazon.Lambda.Annotations
+    Properties:
+      Runtime: dotnet8
+      CodeUri: ./src/CustomAuthLambdas
+      MemorySize: 1024
+      Timeout: 30
+      Policies:
+        - AWSLambdaBasicExecutionRole
+      PackageType: Zip
+      Handler: CustomAuthLambdas::CustomAuthLambdas.Functions_VerifyAuthChallenge_Generated::VerifyAuthChallenge
+      ReservedConcurrentExecutions: 50
+  DefineAuthChallengeLambdaPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref 'DefineAuthChallenge'
+      Principal: cognito-idp.amazonaws.com
+      SourceArn: !GetAtt 'CognitoUserPool.Arn'
+  CreateAuthChallengeLambdaPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref 'CreateAuthChallenge'
+      Principal: cognito-idp.amazonaws.com
+      SourceArn: !GetAtt 'CognitoUserPool.Arn'
+  VerifyAuthChallengeLambdaPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref 'VerifyAuthChallenge'
+      Principal: cognito-idp.amazonaws.com
+      SourceArn: !GetAtt 'CognitoUserPool.Arn'
+  CognitoUserPool:
+    Type: AWS::Cognito::UserPool
+    Properties:
+      UserPoolName: authflow-demo-userpool
+      UsernameAttributes:
+        - email
+      AutoVerifiedAttributes:
+        - email
+      LambdaConfig:
+        DefineAuthChallenge: !GetAtt 'DefineAuthChallenge.Arn'
+        CreateAuthChallenge: !GetAtt 'CreateAuthChallenge.Arn'
+        VerifyAuthChallengeResponse: !GetAtt 'VerifyAuthChallenge.Arn'
+  CognitoUserPoolClient:
+    Type: AWS::Cognito::UserPoolClient
+    Properties:
+      SupportedIdentityProviders:
+        - COGNITO
+      ClientName: authflow-demo-userpool
+      UserPoolId: !Ref 'CognitoUserPool'
+      ExplicitAuthFlows:
+        - ALLOW_USER_SRP_AUTH
+        - ALLOW_USER_PASSWORD_AUTH
+        - ALLOW_ADMIN_USER_PASSWORD_AUTH
+        - ALLOW_CUSTOM_AUTH
+        - ALLOW_REFRESH_TOKEN_AUTH
+Outputs:
+  UserpoolId:
+    Value: !Ref CognitoUserPool
+    Description: Cognito UserPool Id
+  ClientId:
+    Value: !Ref CognitoUserPoolClient
+    Description: Cognito UserPool ClientId
